@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import Icon from "@/components/ui/icon";
+import LeaderboardModal from "@/components/vpn/LeaderboardModal";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const W = 390;
@@ -428,7 +429,11 @@ export default function GameScreen() {
   const [upgradeLevels, setUpgradeLevels] = useState<UpgradeLevels>({ shield: 0, magnet: 0, doublejump: 0, speed: 0 });
   const [showShop, setShowShop] = useState(false);
   const [showUpgrades, setShowUpgrades] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [playerName, setPlayerName] = useState(() => localStorage.getItem("vpn_runner_name") || "");
+  const [editingName, setEditingName] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
+  const [lastScore, setLastScore] = useState({ score: 0, coins: 0 });
 
   const upgradeLevelsRef = useRef(upgradeLevels);
   upgradeLevelsRef.current = upgradeLevels;
@@ -668,12 +673,15 @@ export default function GameScreen() {
             gs.dead = true;
             gs.running = false;
             gs.particles.push(...spawnParticles(gs.player.x + 14, gs.player.y + 20, "#ff4d4d", 20));
+            const finalScore = gs.score;
+            const finalCoins = gs.coins;
+            setLastScore({ score: finalScore, coins: finalCoins });
             setUiState(u => ({
               ...u, dead: true, running: false,
-              score: gs.score,
-              coins: gs.coins,
-              totalCoins: u.totalCoins + gs.coins,
-              bestScore: Math.max(u.bestScore, gs.score),
+              score: finalScore,
+              coins: finalCoins,
+              totalCoins: u.totalCoins + finalCoins,
+              bestScore: Math.max(u.bestScore, finalScore),
             }));
           }
         }
@@ -759,12 +767,46 @@ export default function GameScreen() {
           <p className="text-xs text-muted-foreground mt-0.5">Прыгай, уклоняйся, зарабатывай</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowLeaderboard(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all hover:border-yellow-400/40"
+            style={{ background: "rgba(245,197,66,0.07)", border: "1px solid rgba(245,197,66,0.15)" }}>
+            <Icon name="Trophy" size={14} style={{ color: "#f5c542" } as React.CSSProperties} />
+          </button>
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
             style={{ background: "rgba(245,197,66,0.1)", border: "1px solid rgba(245,197,66,0.2)" }}>
             <span className="text-sm">🪙</span>
             <span className="text-sm font-bold font-mono" style={{ color: "#f5c542" }}>{uiState.totalCoins}</span>
           </div>
         </div>
+      </div>
+
+      {/* Player name */}
+      <div className="flex items-center gap-2">
+        {editingName ? (
+          <input
+            autoFocus
+            value={playerName}
+            maxLength={20}
+            onChange={e => setPlayerName(e.target.value)}
+            onBlur={() => { setEditingName(false); localStorage.setItem("vpn_runner_name", playerName); }}
+            onKeyDown={e => { if (e.key === "Enter") { setEditingName(false); localStorage.setItem("vpn_runner_name", playerName); } }}
+            placeholder="Введи имя агента..."
+            className="flex-1 text-xs px-3 py-2 rounded-xl font-mono focus:outline-none"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(0,214,143,0.3)", color: "var(--vpn-green)" }}
+          />
+        ) : (
+          <button
+            onClick={() => setEditingName(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all hover:border-white/15"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <Icon name="User" size={12} className="text-muted-foreground" />
+            <span className="font-mono" style={{ color: playerName ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.3)" }}>
+              {playerName || "Нажми, чтобы задать имя"}
+            </span>
+            <Icon name="Pencil" size={10} className="text-muted-foreground" />
+          </button>
+        )}
       </div>
 
       {/* Canvas */}
@@ -802,19 +844,29 @@ export default function GameScreen() {
 
         {/* Death overlay */}
         {uiState.dead && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center"
-            style={{ background: "rgba(6,13,26,0.88)", backdropFilter: "blur(4px)" }}>
-            <p className="text-red-400 font-bold text-lg mb-1">Агент захвачен!</p>
-            <p className="text-gray-400 text-xs mb-4">
-              Дистанция: <span className="text-white font-mono">{uiState.score}м</span>
-              {" · "}Монет: <span style={{ color: "#f5c542" }} className="font-mono">🪙{uiState.coins}</span>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2"
+            style={{ background: "rgba(6,13,26,0.9)", backdropFilter: "blur(4px)" }}>
+            <p className="text-2xl">☠️</p>
+            <p className="text-red-400 font-bold text-base">Агент захвачен!</p>
+            <p className="text-gray-400 text-xs">
+              <span className="text-white font-mono">{uiState.score}м</span>
+              {" · "}
+              <span style={{ color: "#f5c542" }} className="font-mono">🪙{uiState.coins}</span>
             </p>
-            <button onClick={startGame}
-              className="px-8 py-3 rounded-xl font-semibold text-sm mb-3"
-              style={{ background: "var(--vpn-green)", color: "#0a1a0f" }}>
-              Снова
-            </button>
-            <p className="text-gray-500 text-[11px]">Рекорд: {uiState.bestScore}м</p>
+            <div className="flex gap-2 mt-1">
+              <button onClick={startGame}
+                className="px-6 py-2.5 rounded-xl font-semibold text-sm"
+                style={{ background: "var(--vpn-green)", color: "#0a1a0f" }}>
+                Снова
+              </button>
+              <button onClick={() => setShowLeaderboard(true)}
+                className="px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-1.5"
+                style={{ background: "rgba(245,197,66,0.15)", border: "1px solid rgba(245,197,66,0.3)", color: "#f5c542" }}>
+                <Icon name="Trophy" size={14} style={{ color: "#f5c542" } as React.CSSProperties} />
+                Рейтинг
+              </button>
+            </div>
+            <p className="text-gray-600 text-[10px]">Рекорд: {uiState.bestScore}м</p>
           </div>
         )}
       </div>
@@ -916,6 +968,15 @@ export default function GameScreen() {
           totalCoins={uiState.totalCoins}
           onBuy={handleBuySubscription}
           onClose={() => setShowShop(false)}
+        />
+      )}
+      {showLeaderboard && (
+        <LeaderboardModal
+          onClose={() => setShowLeaderboard(false)}
+          currentPlayerName={playerName || undefined}
+          newScore={uiState.dead && lastScore.score > 0 ? lastScore.score : undefined}
+          newCoins={uiState.dead && lastScore.score > 0 ? lastScore.coins : undefined}
+          onSaved={(rank) => showNotif(`Место #${rank} в рейтинге!`)}
         />
       )}
     </div>

@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "name": "GET leaderboard",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": { "players": [{ "rank": 1 }] },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST score",
+      "method": "POST",
+      "path": "/",
+      "body": { "player_name": "TestAgent", "score": 999, "coins_earned": 42 },
+      "expectedStatus": 200,
+      "expectedBody": { "saved": true },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
