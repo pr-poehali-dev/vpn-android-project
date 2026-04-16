@@ -3,6 +3,7 @@ import ConnectScreen from "@/components/vpn/ConnectScreen";
 import ServersScreen from "@/components/vpn/ServersScreen";
 import StatsScreen from "@/components/vpn/StatsScreen";
 import SettingsScreen from "@/components/vpn/SettingsScreen";
+import GameScreen from "@/components/vpn/GameScreen";
 import BottomNav from "@/components/vpn/BottomNav";
 
 export type VpnStatus = "disconnected" | "connecting" | "connected";
@@ -29,8 +30,10 @@ export const SERVERS: Server[] = [
   { id: "sg1", country: "Сингапур", city: "Сингапур", flag: "🇸🇬", ping: 112, load: 28, protocol: "WireGuard" },
 ];
 
+export type Tab = "connect" | "servers" | "stats" | "game" | "settings";
+
 export default function Index() {
-  const [tab, setTab] = useState<"connect" | "servers" | "stats" | "settings">("connect");
+  const [tab, setTab] = useState<Tab>("connect");
   const [status, setStatus] = useState<VpnStatus>("disconnected");
   const [selectedServer, setSelectedServer] = useState<Server>(SERVERS[0]);
   const [connectTime, setConnectTime] = useState<number>(0);
@@ -111,6 +114,9 @@ export default function Index() {
           )}
           {tab === "stats" && (
             <StatsScreen status={status} selectedServer={selectedServer} />
+          )}
+          {tab === "game" && (
+            <GameScreen />
           )}
           {tab === "settings" && (
             <SettingsScreen />
